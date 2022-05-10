@@ -18,7 +18,7 @@ function session_key_name(name::String)
 end
 
 
-const SESSION_OPTIONS = Ref{Dict{String,Any}}(Dict{String,Any}("Path" => "/", "HttpOnly" => true, "Secure" => Genie.config.ssl_enabled))
+const SESSION_OPTIONS = Ref{Dict{String,Any}}(Dict{String,Any}("Path" => "/", "HttpOnly" => true, "Secure" => true))
 
 function session_options()
   SESSION_OPTIONS[]
@@ -196,6 +196,9 @@ function get(s::Session, key::Symbol) :: Union{Nothing,Any}
 end
 function get(key::Symbol) :: Union{Nothing,Any}
   get(session(), key)
+end
+function get()
+  session().data
 end
 
 
