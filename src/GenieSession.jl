@@ -18,7 +18,9 @@ function session_key_name(name::String)
 end
 
 
-const SESSION_OPTIONS = Ref{Dict{String,Any}}(Dict{String,Any}("Path" => "/", "HttpOnly" => true, "Secure" => true))
+const SESSION_OPTIONS = Ref{Dict{String,Any}}(Dict{String,Any}("Path" => "/", "HttpOnly" => true,
+                                                                "Secure" => (Genie.Configuration.isprod()),
+                                                                "SameSite" => "Lax", "MaxAge" => 2592000))
 
 function session_options()
   SESSION_OPTIONS[]

@@ -15,7 +15,7 @@ export flash, flash_has_message
 Returns the `flash` dict object associated with the current HTTP request.
 """
 function flash()
-  get(Genie.Requests.payload(), Genie.Router.PARAMS_FLASH_KEY, "")
+  get(Genie.Requests.payload(), GenieSession.PARAMS_FLASH_KEY, "")
 end
 
 
@@ -25,8 +25,8 @@ end
 Stores `value` onto the flash.
 """
 function flash(value::Any) :: Nothing
-  GenieSession.set!(GenieSession.session(Genie.Requests.payload()), Genie.Router.PARAMS_FLASH_KEY, value)
-  Genie.Requests.payload()[Genie.Router.PARAMS_FLASH_KEY] = value
+  GenieSession.set!(GenieSession.session(Genie.Requests.payload()), GenieSession.PARAMS_FLASH_KEY, value)
+  Genie.Requests.payload()[GenieSession.PARAMS_FLASH_KEY] = value
 
   nothing
 end
