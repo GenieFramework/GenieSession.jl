@@ -10,8 +10,8 @@ makedocs(
     pages = [
         "Home" => "index.md",
         "GenieSession API" => [
-          "Flash" => "api/flash.md",
-          "GenieSession" => "api/geniesession.md",
+          "Flash" => "API/flash.md",
+          "GenieSession" => "API/geniesession.md",
         ]
     ],
 )
