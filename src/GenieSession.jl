@@ -64,7 +64,7 @@ Generates a new session id.
 function id() :: String
   if isempty(Genie.Secrets.secret_token())
     if !Genie.Configuration.isprod()
-      @error "Empty Genie.Secrets.secret_token(); using a temporary token"
+      @debug "Empty Genie.Secrets.secret_token(); using a temporary token"
       Genie.Secrets.secret_token!()
     else
       throw(InvalidSessionIdException())
