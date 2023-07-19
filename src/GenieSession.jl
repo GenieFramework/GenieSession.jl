@@ -2,10 +2,7 @@ module GenieSession
 
 import SHA, HTTP, Dates, Logging, Random
 import Genie
-
-
-const PARAMS_SESSION_KEY    = :SESSION
-const PARAMS_FLASH_KEY      = :FLASH
+using Genie.Context
 
 const SESSION_KEY_NAME = Ref{String}("__geniesid")
 
@@ -131,11 +128,13 @@ Initiates a new HTTP session with the provided `session_id`.
 - `res::HTTP.Response`: the response object
 - `options::Dict{String,String}`: extra options for setting the session cookie, such as `Path` and `HttpOnly`
 """
-function start(session_id::String, req::HTTP.Request, res::HTTP.Response;
+function start( session_id::String,
+                req::HTTP.Request,
+                res::HTTP.Response;
                 options::Dict{String,Any} = session_options()) :: Tuple{Session,HTTP.Response}
   Genie.Cookies.set!(res, session_key_name(), session_id, options)
 
-  load(session_id), res
+  load(req, res, session_id), res
 end
 
 
@@ -149,42 +148,41 @@ Initiates a new default session object, generating a new session id.
 - `res::HTTP.Response`: the response object
 - `options::Dict{String,String}`: extra options for setting the session cookie, such as `Path` and `HttpOnly`
 """
-function start(req::HTTP.Request, res::HTTP.Response, params::Dict{Symbol,Any} = Dict{Symbol,Any}(); options::Dict{String,Any} = session_options()) :: Tuple{HTTP.Request,HTTP.Response,Dict{Symbol,Any},Session}
+function start(req::HTTP.Request, res::HTTP.Response, params::Genie.Context.Params; options::Dict{String,Any} = session_options()) :: Tuple{HTTP.Request,HTTP.Response,Genie.Context.Params}
   session, res = start(id(req, res), req, res; options = options)
+  params.collection = ImmutableDict(
+    params.collection,
+    :session => session,
+    :flash => begin
+      if session !== nothing
+        s = get(session, :flash)
+        if s === nothing
+          ""
+        else
+          unset!(session, :flash)
+          s
+        end
+      else
+        ""
+      end
+    end
+  )
 
-  params[PARAMS_SESSION_KEY]   = session
-  params[PARAMS_FLASH_KEY]     = begin
-                                                if session !== nothing
-                                                  s = get(session, PARAMS_FLASH_KEY)
-                                                  if s === nothing
-                                                    ""
-                                                  else
-                                                    unset!(session, PARAMS_FLASH_KEY)
-                                                    s
-                                                  end
-                                                else
-                                                  ""
-                                                end
-                                              end
-
-  req, res, params, session
+  req, res, params
 end
-const start! = start
 
 
 """
-    set!(s::Session, key::Symbol, value::Any) :: Session
+    set!(params::Params, key::Symbol, value::Any) :: Params
 
 Stores `value` as `key` on the `Session` object `s`.
 """
-function set!(s::Session, key::Symbol, value::Any) :: Session
+function set!(params::Genie.Context.Params, key::Symbol, value::Any) :: Params
+  s = params[:session]
   s.data[key] = value
-  persist(s)
+  persist(params)
 
-  s
-end
-function set!(key::Symbol, value::Any) :: Session
-  set!(session(), key, value)
+  params
 end
 
 
@@ -196,32 +194,32 @@ Returns the value stored on the `Session` object `s` as `key`, wrapped in a `Uni
 function get(s::Session, key::Symbol) :: Union{Nothing,Any}
   haskey(s.data, key) ? (s.data[key]) : nothing
 end
-function get(key::Symbol) :: Union{Nothing,Any}
-  get(session(), key)
+
+
+function get(params::Genie.Context.Params, key::Symbol) :: Union{Nothing,Any}
+  get(session(params), key)
 end
-function get()
-  session().data
+function get(params)
+  session(params).data
 end
 
 
 """
-    get(s::Session, key::Symbol, default::T) :: T where T
+    get(params::Params, key::Symbol, default::T) :: T where T
 
-Attempts to retrive the value stored on the `Session` object `s` as `key`.
+Attempts to retrive the value stored on the `Session` under `key`.
 If the value is not set, it returns the `default`.
 """
-function get(s::Session, key::Symbol, default::T) where {T}
+function get(params::Genie.Context.Params, key::Symbol, default::T) where {T}
+  s = params[:session]
   val = get(s, key)
 
   val === nothing ? default : val
 end
-function get(key::Symbol, default::T) where {T}
-  get(session(), key, default)
-end
-function get!(key::Symbol, default::T) where {T}
-  get!(session(), key, default)
-end
-function get!(s::Session, key::Symbol, default::T) where {T}
+
+
+function get!(params::Genie.Context.Params, key::Symbol, default::T) where {T}
+  s = params[:session]
   val = get(s, key, default)
   set!(key, val)
 
@@ -230,14 +228,15 @@ end
 
 
 """
-    unset!(s::Session, key::Symbol) :: Session
+    unset!(params::Params, key::Symbol) :: Params
 
-Removes the value stored on the `Session` `s` as `key`.
+Removes the value stored on the `Session` under `key`.
 """
-function unset!(s::Session, key::Symbol) :: Session
+function unset!(params::Genie.Context.Params, key::Symbol) :: Params
+  s = params[:session]
   delete!(s.data, key)
 
-  s
+  params
 end
 
 
@@ -260,7 +259,7 @@ function persist end
 
 
 """
-    load(session_id::String) :: Session
+    load(req, res, session_id::String) :: Session
 
 Loads session data from persistent storage - delegates to the underlying `SessionAdapter`.
 """
@@ -272,14 +271,14 @@ function load end
 
 Returns the `Session` object associated with the current HTTP request.
 """
-function session(params::Dict{Symbol,Any} = Genie.Router.params()) :: Session
-  ( (! haskey(params, PARAMS_SESSION_KEY) || isnothing(params[PARAMS_SESSION_KEY])) ) &&
-    (params = GenieSession.start!(
-      Base.get(params, Genie.Router.PARAMS_REQUEST_KEY, HTTP.Request()),
-      Base.get(params, Genie.Router.PARAMS_RESPONSE_KEY, HTTP.Response())
+function session(params::Genie.Context.Params) :: Session
+  ( (! haskey(params.collection, :session) || isnothing(params[:session])) ) &&
+    (params = GenieSession.start(
+      Base.get(params, :request, HTTP.Request()),
+      Base.get(params, :response, HTTP.Response())
     )[3])
 
-  params[PARAMS_SESSION_KEY]
+  params[:session]
 end
 
 end
