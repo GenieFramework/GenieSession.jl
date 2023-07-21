@@ -212,7 +212,7 @@ Attempts to retrive the value stored on the `Session` under `key`.
 If the value is not set, it returns the `default`.
 """
 function get(params::Genie.Context.Params, key::Symbol, default::T) where {T}
-  if ! haskey(params.collection, :session)
+  if ! haskey(params, :session)
     _, _, params = start(params[:request], params[:response], params)
   end
 
@@ -238,7 +238,7 @@ end
 Removes the value stored on the `Session` under `key`.
 """
 function unset!(params::Genie.Context.Params, key::Symbol) :: Params
-  if haskey(params.collection, :session)
+  if haskey(params, :session)
     s = params[:session]
     delete!(s.data, key)
   end
@@ -289,7 +289,7 @@ function load end
 Returns the `Session` object associated with the current HTTP request.
 """
 function session(params::Genie.Context.Params) :: Session
-  ( (! haskey(params.collection, :session) || isnothing(params[:session])) ) &&
+  ( (! haskey(params, :session) || isnothing(params[:session])) ) &&
     (params = GenieSession.start(
       Base.get(params, :request, HTTP.Request()),
       Base.get(params, :response, HTTP.Response())

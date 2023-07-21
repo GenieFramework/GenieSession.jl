@@ -37,7 +37,7 @@ end
 Checks if there's any value on the flash storage
 """
 function flash_has_message(params::Params) :: Bool
-  haskey(params.collection, :flash) && ! isempty(params[:flash])
+  haskey(params, :flash) && ! isempty(params[:flash])
 end
 
 end
