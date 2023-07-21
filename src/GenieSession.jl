@@ -150,16 +150,17 @@ Initiates a new default session object, generating a new session id.
 """
 function start(req::HTTP.Request, res::HTTP.Response, params::Genie.Context.Params; options::Dict{String,Any} = session_options()) :: Tuple{HTTP.Request,HTTP.Response,Genie.Context.Params}
   session, res = start(id(req, res), req, res; options = options)
+
   params.collection = ImmutableDict(
     params.collection,
     :session => session,
     :flash => begin
       if session !== nothing
-        s = get(session, :flash)
+        s = Base.get(session.data, :flash, nothing)
         if s === nothing
           ""
         else
-          unset!(session, :flash)
+          delete!(session.data, :flash)
           s
         end
       else
@@ -211,6 +212,10 @@ Attempts to retrive the value stored on the `Session` under `key`.
 If the value is not set, it returns the `default`.
 """
 function get(params::Genie.Context.Params, key::Symbol, default::T) where {T}
+  if ! haskey(params.collection, :session)
+    _, _, params = start(params[:request], params[:response], params)
+  end
+
   s = params[:session]
   val = get(s, key)
 
@@ -221,7 +226,7 @@ end
 function get!(params::Genie.Context.Params, key::Symbol, default::T) where {T}
   s = params[:session]
   val = get(s, key, default)
-  set!(key, val)
+  set!(params, key, val)
 
   val
 end
@@ -233,8 +238,10 @@ end
 Removes the value stored on the `Session` under `key`.
 """
 function unset!(params::Genie.Context.Params, key::Symbol) :: Params
-  s = params[:session]
-  delete!(s.data, key)
+  if haskey(params.collection, :session)
+    s = params[:session]
+    delete!(s.data, key)
+  end
 
   params
 end
@@ -250,12 +257,22 @@ function isset(s::Union{Session,Nothing}, key::Symbol) :: Bool
 end
 
 
+function write end
+
+
 """
-    persist(s::Session) :: Session
+    persist(p::Params) :: Params
 
 Generic method for persisting session data - delegates to the underlying `SessionAdapter`.
 """
-function persist end
+function persist(req::GenieSession.HTTP.Request, res::GenieSession.HTTP.Response, params::Params) :: Tuple{GenieSession.HTTP.Request,GenieSession.HTTP.Response,Params}
+  GenieSession.write(params)
+  req, res, params
+end
+function persist(params::Genie.Context.Params) :: Genie.Context.Params
+  GenieSession.write(params)
+  params
+end
 
 
 """

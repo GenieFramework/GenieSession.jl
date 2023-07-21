@@ -16,7 +16,7 @@ export flash, flash_has_message
 Returns the `flash` data associated with the current HTTP request.
 """
 function flash(params::Genie.Context.Params) :: String
-  get(params, :flash, "")
+  GenieSession.get(params, :flash, "")
 end
 
 
@@ -26,7 +26,7 @@ end
 Stores `value` onto the flash.
 """
 function flash(params::Genie.Context.Params, value::T) :: T where T
-  GenieSession.set!(GenieSession.session(params), :flash, value)
+  GenieSession.set!(params, :flash, value)
   params[:flash] = value
 end
 
@@ -37,7 +37,7 @@ end
 Checks if there's any value on the flash storage
 """
 function flash_has_message(params::Params) :: Bool
-  ! isempty(flash(params))
+  haskey(params.collection, :flash) && ! isempty(params[:flash])
 end
 
 end
