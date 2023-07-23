@@ -3,6 +3,7 @@ module GenieSession
 import SHA, HTTP, Dates, Logging, Random
 import Genie
 using Genie.Context
+using OrderedCollections
 
 const SESSION_KEY_NAME = Ref{String}("__geniesid")
 
@@ -151,8 +152,8 @@ Initiates a new default session object, generating a new session id.
 function start(req::HTTP.Request, res::HTTP.Response, params::Genie.Context.Params; options::Dict{String,Any} = session_options()) :: Tuple{HTTP.Request,HTTP.Response,Genie.Context.Params}
   session, res = start(id(req, res), req, res; options = options)
 
-  params.collection = ImmutableDict(
-    params.collection,
+  params.collection = OrderedCollections.LittleDict(
+    params.collection...,
     :session => session,
     :flash => begin
       if session !== nothing
