@@ -1,6 +1,6 @@
 using GenieSession
 using Test
+using SafeTestsets
 
-@testset "GenieSession.jl" begin
-    # Write your tests here.
-end
+include("tests_Session.jl")
+include("tests_Sessions_id.jl")

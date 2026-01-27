@@ -1,0 +1,7 @@
+[deps]
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+Genie = "c43c736e-a2d1-11e8-161f-af95117fbd1e"
+GenieSessionFileSession = "5c4fdc26-39e3-47cf-9034-e533e09961c2"
+HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
+SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
